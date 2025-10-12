@@ -29,6 +29,9 @@ export default function RootLayout({ children }) {
             <Link href="/about" className="nav-link">
               About
             </Link>
+            <Link href="/datainsert" className="nav-link">
+              Data Ekle
+            </Link>
           </div>
         </header>
 
