@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,7 +21,18 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
+        <header className="navbar">
+          <div className="nav-inner">
+            <Link href="/" className="nav-link">
+              Home
+            </Link>
+            <Link href="/about" className="nav-link">
+              About
+            </Link>
+          </div>
+        </header>
+
+        <main className="app-main">{children}</main>
       </body>
     </html>
   );
