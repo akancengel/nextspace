@@ -1,9 +1,11 @@
 export const dynamic = "force-dynamic";
 
+import SearchClient from "./SearchClient";
 import { supabase } from "../../lib/supabaseClient";
 
 export default async function About() {
-    // Fetch title and description from 'nextspace' table
+    
+    // Fetch title and description from 'nextspace' table as initial data
     const { data, error } = await supabase
         .from("nextspace")
         .select("title, description, created_at")
@@ -15,19 +17,11 @@ export default async function About() {
             <p>Bu sayfa Next.js projenizdeki About sayfasıdır.</p>
 
             <section style={{ marginTop: 24 }}>
-                <h2>Eklenen içerikler</h2>
+                <h2>Arama ve içerikler</h2>
                 {error && <div style={{ color: "#b00020" }}>Hata: {error.message}</div>}
-                {!error && (!data || data.length === 0) && <div>Henüz içerik yok.</div>}
 
-                <ul>
-                    {data &&
-                        data.map((row, idx) => (
-                            <li key={idx} style={{ marginBottom: 12 }}>
-                                <strong>{row.title}</strong>
-                                <div>{row.description}</div>
-                            </li>
-                        ))}
-                </ul>
+                {/* Client-side search component: uses Supabase to search title/description */}
+                <SearchClient initialData={data ?? []} />
             </section>
         </div>
     );
