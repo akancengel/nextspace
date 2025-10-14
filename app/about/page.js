@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import SearchClient from "./SearchClient";
 import { supabase } from "../../lib/supabaseClient";
 

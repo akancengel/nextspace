@@ -31,6 +31,17 @@ export default function DataInsertPage() {
 				setMessage({ type: "success", text: "Kayıt başarıyla eklendi." });
 				setTitle("");
 				setDescription("");
+
+				// Trigger revalidation of /about so new content appears
+				try {
+					await fetch('/api/revalidate', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ secret: process.env.NEXT_PUBLIC_REVALIDATE_SECRET, path: '/about' }),
+					});
+				} catch (e) {
+					// ignore revalidate errors client-side
+				}
 			}
 		} catch (err) {
 			setMessage({ type: "error", text: err.message || "Bilinmeyen hata" });
