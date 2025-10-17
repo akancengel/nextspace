@@ -1,34 +1,30 @@
 "use client";
-import Logout from "@/app/components/Logout";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/app/context/AuthContext";
 
 export default function Dashboard() {
-    const { user, loading } = useAuth();
 
-    if (loading) return null;
+    const { user, loading, loadProfile } = useAuth();
+	const [fetchingProfile, setFetchingProfile] = useState(false);
 
-    return (
-        <div>
-            <h3>Kullanıcı Bilgileri</h3>
-            <p>Adı: {user?.full_name ?? user?.email}</p>
-            <p>E-Mail: {user?.email}</p>
-            <p>Kullanıcı ID: {user?.id}</p>
-            <p>Şirket ID: {user?.company_id}</p>
-            <p>Rol: {user?.role}</p>
-            <hr/>
-            <h3>Şirket Bilgileri</h3>
-            {user?.company ? (
-                <div>
-                    <p>Şirket Adı: {user.company.name ?? user.company.title ?? "—"}</p>
-                    <p>Şirket ID: {user.company.id ?? "—"}</p>
-                    <p>Şirket E-posta: {user.company.email ?? "—"}</p>
-                    <p>Adres: {user.company.address ?? "—"}</p>
-                    <p>Oluşturulma: {user.company.created_at ? new Date(user.company.created_at).toLocaleString() : "—"}</p>
-                </div>
-            ) : (
-                <p>Şirket bilgisi yok.</p>
-            )}
-            <Logout />
-        </div>
-    );
+	// mount olduğunda detaylı profile gerekiyorsa çek
+	useEffect(() => {
+		if (loading) return;
+		if (!user) return;
+
+		// Eğer user temel (basic) bilgiyse veya company yoksa detay çek
+		const needsProfile = user?._basic || !user?.company;
+		if (needsProfile && loadProfile) {
+			setFetchingProfile(true);
+			loadProfile().finally(() => setFetchingProfile(false));
+		}
+	}, [loading, user?.id, loadProfile]); // loadProfile bağımlılığa eklendi
+
+	if (loading) return null;
+
+	return (
+		<div>
+            Dashboard
+		</div>
+	);
 }
