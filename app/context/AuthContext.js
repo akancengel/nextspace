@@ -46,10 +46,11 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         let mounted = true;
 
+        // init: getUser() dönüşünü güvenli kullan
         const init = async () => {
             try {
-                // Daha hızlı: getUser() -> cache'den çeker
-                const { data: { user: currentUser } } = await supabase.auth.getUser();
+                const res = await supabase.auth.getUser();
+                const currentUser = res?.data?.user ?? null; // güvenli erişim
 
                 if (currentUser) {
                     const profile = await fetchProfile(currentUser.id);
@@ -61,29 +62,40 @@ export function AuthProvider({ children }) {
                 console.error("Session init hatası:", err);
                 if (mounted) setUser(null);
             } finally {
-                if (mounted) setLoading(false);
+                if (mounted) setLoading(false); // kesinlikle false yap
             }
         };
 
         init();
 
         // Auth değişikliklerini dinle
-        const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            const sessUser = session?.user;
-            if (sessUser) {
-                const profile = await fetchProfile(sessUser.id);
-                if (mounted) setUser(profile ?? { id: sessUser.id, email: sessUser.email });
-            } else {
+        const authListener = supabase.auth.onAuthStateChange(async (_event, session) => {
+            try {
+                const sessUser = session?.user;
+                if (sessUser) {
+                    const profile = await fetchProfile(sessUser.id);
+                    if (mounted) setUser(profile ?? { id: sessUser.id, email: sessUser.email });
+                } else {
+                    if (mounted) setUser(null);
+                }
+            } catch (e) {
+                console.error("onAuthStateChange handler error:", e);
                 if (mounted) setUser(null);
+            } finally {
+                if (mounted) setLoading(false);
             }
-            if (mounted) setLoading(false);
         });
 
         return () => {
             mounted = false;
+            // cleanup listener: farklı SDK dönüş şekillerine karşı güvenli unsubscribe
             try {
-                listener?.subscription?.unsubscribe?.();
-            } catch (_) { }
+                if (authListener?.subscription?.unsubscribe) authListener.subscription.unsubscribe();
+                else if (authListener?.data?.subscription?.unsubscribe) authListener.data.subscription.unsubscribe();
+                else if (typeof authListener?.unsubscribe === "function") authListener.unsubscribe();
+            } catch (e) {
+                // ignore
+            }
         };
     }, []);
 
