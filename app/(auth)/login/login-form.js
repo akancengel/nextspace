@@ -1,55 +1,65 @@
 "use client";
 import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/app/context/AuthContext";
+import { useProfileStore } from "@/app/store/userProfileStore";
 
 export default function LoginForm() {
     const [loading, setLoading] = useState(false);
     const [form, setForm] = useState({ email: "", password: "" });
     const router = useRouter();
-    const { setUser } = useAuth();
+    const { setUser, loadProfile } = useAuth();
+    const setProfile = useProfileStore((state) => state.setProfile);
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: form.email,
-            password: form.password,
-        });
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: form.email,
+                password: form.password,
+            });
 
-        setLoading(false);
-
-        if (error) {
-            alert("Hata: " + error.message);
-        } else {
-            try {
-                const userId = data?.user?.id;
-                if (userId) {
-                    const { data: profile, error: profileError } = await supabase
-                        .from("users")
-                        .select("*")
-                        .eq("id", userId)
-                        .single();
-
-                    if (profileError) {
-                        console.warn("Profil çekme hatası:", profileError);
-                        setUser({ id: userId, email: data.user.email });
-                    } else {
-                        setUser(profile);
-                    }
-                }
-            } catch (err) {
-                console.error("Profil setleme hatası:", err);
+            if (error) {
+                alert("Hata: " + error.message);
+                return;
             }
 
-            router.push("/dashboard"); // Giriş sonrası dashboard’a yönlendir
+            const userId = data?.user?.id;
+            if (!userId) {
+                alert("Kullanıcı ID alınamadı.");
+                return;
+            }
+
+            // 🔹 1. Profil (users + companies) verisini çek
+            const profile = await loadProfile(userId);
+
+            // 🔹 2. Context ve Global Store’a kaydet
+            if (profile) {
+                setUser(profile);
+                setProfile(profile);
+            } else {
+                // Profil bulunamazsa basic kullanıcıyı ekle
+                const basic = { id: userId, email: data.user.email, _basic: true };
+                setUser(basic);
+                setProfile(basic);
+            }
+
+            // 🔹 3. Dashboard’a yönlendir
+            router.push("/dashboard");
+
+        } catch (err) {
+            console.error("Login hata:", err);
+            alert("Beklenmedik bir hata oluştu.");
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <form onSubmit={handleLogin} className="flex flex-col gap-3 max-w-md mx-auto mt-10">
+        <form onSubmit={handleLogin}>
             <input
                 type="email"
                 placeholder="E-posta"
@@ -64,11 +74,7 @@ export default function LoginForm() {
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 required
             />
-            <button
-                type="submit"
-                disabled={loading}
-                className="bg-blue-600 text-white py-2 rounded-md"
-            >
+            <button type="submit" disabled={loading}>
                 {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
             </button>
         </form>
